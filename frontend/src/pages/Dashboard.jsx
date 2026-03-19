@@ -11,7 +11,7 @@ const Dashboard = () => {
   const [problems, setProblems] = useState([])
 
   useEffect(() => {
-    // Mock data - replace with API call
+    // api use karnhi ha
     setProblems([
       { id: 1, title: 'Two Sum', difficulty: 'Easy', acceptance: 49.2 },
       { id: 2, title: 'Add Two Numbers', difficulty: 'Medium', acceptance: 40.1 },
