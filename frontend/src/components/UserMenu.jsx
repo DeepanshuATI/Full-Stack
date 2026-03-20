@@ -10,6 +10,7 @@ import {
   ChevronDown 
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { authAPI } from '../utils/api'
 
 const UserMenu = () => {
   const [isOpen, setIsOpen] = useState(false)
@@ -28,10 +29,21 @@ const UserMenu = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const handleLogout = () => {
-    logout()
-    setIsOpen(false)
-    navigate('/')
+  const handleLogout = async () => {
+    try {
+      // Call backend logout API
+      await authAPI.logout()
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Continue with logout even if API call fails
+    } finally {
+      // Clear local storage and auth context
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      logout()
+      setIsOpen(false)
+      navigate('/')
+    }
   }
 
   const menuItems = [

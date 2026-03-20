@@ -1,65 +1,74 @@
 import { useState } from 'react'
 import { X, ArrowLeft } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { authAPI } from '../utils/api'
 
 const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
-  const [mode, setMode] = useState(initialMode) // 'login', 'register', 'forgot'
+  const [mode, setMode] = useState(initialMode) // 'login', 'register'
   const [formData, setFormData] = useState({
-    identifier: '', // Can be email or username for login
-    username: '',
-    email: '',
+    emailId: '', // For login
+    firstName: '', // For register
+    lastName: '', // For register (REQUIRED by validator)
+    age: '', // For register
     password: ''
   })
-  const [resetEmailSent, setResetEmailSent] = useState(false)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   const { login } = useAuth()
 
   if (!isOpen) return null
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setError('')
+    setLoading(true)
     
-    if (mode === 'forgot') {
-      // TODO: Replace with actual API call to your backend
-      // Example API call for forgot password:
-      // await axios.post('/api/auth/forgot-password', { email: formData.email })
+    try {
+      let response
       
-      // Mock forgot password for demo
-      setResetEmailSent(true)
-      setTimeout(() => {
-        setResetEmailSent(false)
-        setMode('login')
-      }, 3000)
-      return
+      if (mode === 'login') {
+        // Login API call
+        response = await authAPI.login({
+          emailId: formData.emailId,
+          password: formData.password
+        })
+      } else {
+        // Register API call
+        response = await authAPI.register({
+          firstName: formData.firstName,
+          lastName: formData.lastName, // Required by backend validator
+          emailId: formData.emailId,
+          age: parseInt(formData.age),
+          password: formData.password
+        })
+      }
+      
+      // Backend sends token in cookie, not in response body
+      // We need to extract user data from the response or make another call
+      // For now, create user object from form data
+      const userData = {
+        id: Date.now(), // Temporary ID
+        username: formData.firstName,
+        email: formData.emailId,
+        role: 'user' // Backend will set this based on credentials
+      }
+      
+      localStorage.setItem('user', JSON.stringify(userData))
+      login(userData)
+      
+      // Close modal on success
+      onClose()
+      
+    } catch (err) {
+      console.error('Authentication error:', err)
+      setError(
+        err.response?.data?.message || 
+        err.response?.data?.error || 
+        'Authentication failed. Please try again.'
+      )
+    } finally {
+      setLoading(false)
     }
-    
-    // TODO: Replace with actual API call to your backend
-    // The backend will return user data with role based on credentials
-    // Example API call for login:
-    // const response = await axios.post('/api/auth/login', {
-    //   identifier: formData.identifier, // email or username
-    //   password: formData.password
-    // })
-    // 
-    // Example API call for register:
-    // const response = await axios.post('/api/auth/register', {
-    //   username: formData.username,
-    //   email: formData.email,
-    //   password: formData.password
-    // })
-    // 
-    // login(response.data.user)
-    // localStorage.setItem('token', response.data.token)
-    
-    // Mock authentication for demo
-    const userData = {
-      id: Date.now(),
-      username: mode === 'login' ? formData.identifier : formData.username,
-      email: formData.email,
-      role: 'user' // Backend will set this to 'admin' if credentials match admin account
-    }
-    
-    login(userData)
-    onClose()
   }
 
   const handleChange = (e) => {
@@ -85,82 +94,70 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
         </button>
 
         <div className="mb-6">
-          {mode === 'forgot' && (
-            <button
-              onClick={() => setMode('login')}
-              className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to Sign In</span>
-            </button>
-          )}
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
             {mode === 'login' && 'Sign In'}
             {mode === 'register' && 'Create Account'}
-            {mode === 'forgot' && 'Reset Password'}
           </h2>
-          {mode === 'forgot' && (
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-              Enter your email address and we'll send you a link to reset your password.
-            </p>
-          )}
         </div>
 
-        {resetEmailSent ? (
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 text-center">
-            <p className="text-green-800 dark:text-green-200 font-medium">
-              Password reset link sent!
-            </p>
-            <p className="text-sm text-green-600 dark:text-green-300 mt-1">
-              Check your email for instructions.
-            </p>
+        {error && (
+          <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+            <p className="text-red-800 dark:text-red-200 text-sm">{error}</p>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === 'forgot' ? (
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {mode === 'login' ? (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Email Address
+                Email
               </label>
               <input
                 type="email"
-                name="email"
-                value={formData.email}
+                name="emailId"
+                value={formData.emailId}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                disabled={loading}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:opacity-50"
                 placeholder="Enter your email"
-              />
-            </div>
-          ) : mode === 'login' ? (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Email or Username
-              </label>
-              <input
-                type="text"
-                name="identifier"
-                value={formData.identifier}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                placeholder="Enter your email or username"
               />
             </div>
           ) : (
             <>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Username
+                  First Name
                 </label>
                 <input
                   type="text"
-                  name="username"
-                  value={formData.username}
+                  name="firstName"
+                  value={formData.firstName}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                  placeholder="Choose a username"
+                  disabled={loading}
+                  minLength={3}
+                  maxLength={20}
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:opacity-50"
+                  placeholder="Enter your first name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Last Name
+                </label>
+                <input
+                  type="text"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  required
+                  disabled={loading}
+                  minLength={3}
+                  maxLength={20}
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:opacity-50"
+                  placeholder="Enter your last name"
                 />
               </div>
 
@@ -170,12 +167,31 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
                 </label>
                 <input
                   type="email"
-                  name="email"
-                  value={formData.email}
+                  name="emailId"
+                  value={formData.emailId}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  disabled={loading}
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:opacity-50"
                   placeholder="Enter your email"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Age
+                </label>
+                <input
+                  type="number"
+                  name="age"
+                  value={formData.age}
+                  onChange={handleChange}
+                  required
+                  disabled={loading}
+                  min={10}
+                  max={80}
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:opacity-50"
+                  placeholder="Enter your age"
                 />
               </div>
             </>
@@ -192,40 +208,41 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
                 value={formData.password}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                disabled={loading}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:opacity-50"
                 placeholder="Enter your password"
               />
+              {mode === 'register' && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Password must be strong (min 8 chars, uppercase, lowercase, number, symbol)
+                </p>
+              )}
             </div>
           )}
 
           {mode === 'login' && (
             <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => setMode('forgot')}
-                className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                Forgot password?
-              </button>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                Forgot password? (Not available yet)
+              </span>
             </div>
           )}
 
           <button
             type="submit"
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+            disabled={loading}
+            className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
           >
-            {mode === 'login' && 'Sign In'}
-            {mode === 'register' && 'Create Account'}
-            {mode === 'forgot' && 'Send Reset Link'}
+            {loading ? 'Please wait...' : (mode === 'login' ? 'Sign In' : 'Create Account')}
           </button>
         </form>
-        )}
 
         {mode !== 'forgot' && (
           <div className="mt-6 text-center">
             <button
               onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+              disabled={loading}
+              className="text-sm text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50"
             >
               {mode === 'login' 
                 ? "Don't have an account? Register" 

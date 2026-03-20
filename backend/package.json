@@ -4,7 +4,7 @@
   "description": "Lc-Major project\r Day 1",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/index.js"
   },
   "keywords": [],
   "author": "",
@@ -21,5 +21,7 @@
     "parser": "^0.1.4",
     "redis": "^5.11.0",
     "validator": "^13.15.26"
-  }
+  },
+  "devDependencies": {},
+  "type": "commonjs"
 }
