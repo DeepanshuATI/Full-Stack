@@ -1,21 +1,23 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { X, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { authAPI } from '../utils/api'
 
 const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
-  const [mode, setMode] = useState(initialMode) 
+  const [mode, setMode] = useState(initialMode)
   const [formData, setFormData] = useState({
-    emailId: '', 
-    firstName: '', 
-    lastName: '', 
-    age: '', 
+    emailId: '',
+    firstName: '',
+    lastName: '',
+    age: '',
     password: ''
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const { login } = useAuth()
+  const navigate = useNavigate()
 
   if (!isOpen) return null
 
@@ -23,43 +25,52 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
     e.preventDefault()
     setError('')
     setLoading(true)
-    
+
     try {
-      
+      let response;
+
       if (mode === 'login') {
-        await authAPI.login({
+        response = await authAPI.login({
           emailId: formData.emailId,
           password: formData.password
         })
       } else {
-        await authAPI.register({
+        response = await authAPI.register({
           firstName: formData.firstName,
-          lastName: formData.lastName, 
+          lastName: formData.lastName,
           emailId: formData.emailId,
           age: parseInt(formData.age),
           password: formData.password
         })
       }
-      
-      
+
+
+      const backendUser = response?.data?.data
+
       const userData = {
-        id: Date.now(), 
-        username: formData.firstName || formData.emailId.split('@')[0],
-        email: formData.emailId,
-        role: 'user' 
+        id: backendUser?._id || Date.now(),
+        username: backendUser?.firstName || formData.firstName || formData.emailId.split('@')[0],
+        email: backendUser?.emailId || formData.emailId,
+        role: backendUser?.role || 'user'
       }
-      
+
       localStorage.setItem('user', JSON.stringify(userData))
       login(userData)
-      
-      
+
       onClose()
-      
+
+      // Redirect based on role
+      if (userData.role === 'admin') {
+        navigate('/admin')
+      } else {
+        navigate('/')
+      }
+
     } catch (err) {
       console.error('Authentication error:', err)
       setError(
-        err.response?.data?.message || 
-        err.response?.data?.error || 
+        err.response?.data?.message ||
+        err.response?.data?.error ||
         'Authentication failed. Please try again.'
       )
     } finally {
@@ -76,11 +87,11 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div 
+      <div
         className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm"
         onClick={onClose}
       />
-      
+
       <div className="relative bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-md mx-4 p-8">
         <button
           onClick={onClose}
@@ -234,7 +245,7 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
           {mode === 'login' && (
             <div className="flex justify-end">
               <span className="text-sm text-gray-500 dark:text-gray-400">
-                Forgot password? 
+                Forgot password?
               </span>
             </div>
           )}
@@ -255,8 +266,8 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
               disabled={loading}
               className="text-sm text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50"
             >
-              {mode === 'login' 
-                ? "Don't have an account? Register" 
+              {mode === 'login'
+                ? "Don't have an account? Register"
                 : 'Already have an account? Sign In'}
             </button>
           </div>

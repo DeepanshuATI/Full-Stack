@@ -73,7 +73,16 @@ const login=async(req,res)=>{
         res.cookie("token",token,{maxage:60*60*1000}) //mili 
         //sec second m hota hai 
         
-        res.status(200).json({ message: "User logged in successfully" });
+        res.status(200).json({ 
+            message: "User logged in successfully",
+            data: {
+                _id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                emailId: user.emailId,
+                role: user.role
+            }
+        });
 
     } catch (err) {
         res.status(400).json({ message: "Error "+err });
