@@ -31,13 +31,13 @@ const UserMenu = () => {
 
   const handleLogout = async () => {
     try {
-      // Call backend logout API
+      
       await authAPI.logout()
     } catch (error) {
       console.error('Logout error:', error)
-      // Continue with logout even if API call fails
+      
     } finally {
-      // Clear local storage and auth context
+      
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       logout()

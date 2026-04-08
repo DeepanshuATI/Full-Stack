@@ -56,7 +56,7 @@ const ProblemList = ({ problems, solvedProblems = [] }) => {
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {problem.id}.
+                      {problem.number}.
                     </span>
                     <span className="text-sm font-medium text-gray-900 dark:text-white">
                       {problem.title}

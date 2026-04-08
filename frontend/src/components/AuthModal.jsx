@@ -1,19 +1,20 @@
 import { useState } from 'react'
-import { X, ArrowLeft } from 'lucide-react'
+import { X, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { authAPI } from '../utils/api'
 
 const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
-  const [mode, setMode] = useState(initialMode) // 'login', 'register'
+  const [mode, setMode] = useState(initialMode) 
   const [formData, setFormData] = useState({
-    emailId: '', // For login
-    firstName: '', // For register
-    lastName: '', // For register (REQUIRED by validator)
-    age: '', // For register
+    emailId: '', 
+    firstName: '', 
+    lastName: '', 
+    age: '', 
     password: ''
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const { login } = useAuth()
 
   if (!isOpen) return null
@@ -24,39 +25,34 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
     setLoading(true)
     
     try {
-      let response
       
       if (mode === 'login') {
-        // Login API call
-        response = await authAPI.login({
+        await authAPI.login({
           emailId: formData.emailId,
           password: formData.password
         })
       } else {
-        // Register API call
-        response = await authAPI.register({
+        await authAPI.register({
           firstName: formData.firstName,
-          lastName: formData.lastName, // Required by backend validator
+          lastName: formData.lastName, 
           emailId: formData.emailId,
           age: parseInt(formData.age),
           password: formData.password
         })
       }
       
-      // Backend sends token in cookie, not in response body
-      // We need to extract user data from the response or make another call
-      // For now, create user object from form data
+      
       const userData = {
-        id: Date.now(), // Temporary ID
-        username: formData.firstName,
+        id: Date.now(), 
+        username: formData.firstName || formData.emailId.split('@')[0],
         email: formData.emailId,
-        role: 'user' // Backend will set this based on credentials
+        role: 'user' 
       }
       
       localStorage.setItem('user', JSON.stringify(userData))
       login(userData)
       
-      // Close modal on success
+      
       onClose()
       
     } catch (err) {
@@ -202,16 +198,31 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Password
               </label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                disabled={loading}
-                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:opacity-50"
-                placeholder="Enter your password"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  disabled={loading}
+                  className="w-full px-4 py-2 pr-12 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:opacity-50"
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={loading}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors disabled:opacity-50"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
               {mode === 'register' && (
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   Password must be strong (min 8 chars, uppercase, lowercase, number, symbol)
@@ -223,7 +234,7 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
           {mode === 'login' && (
             <div className="flex justify-end">
               <span className="text-sm text-gray-500 dark:text-gray-400">
-                Forgot password? (Not available yet)
+                Forgot password? 
               </span>
             </div>
           )}

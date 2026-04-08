@@ -4,20 +4,20 @@ import { useTheme } from '../context/ThemeContext'
 const CodeEditor = ({ value, onChange, language = 'javascript' }) => {
   const { theme } = useTheme()
 
-  // Map language values to Monaco Editor language identifiers
+  
   const getMonacoLanguage = (lang) => {
     const languageMap = {
-      'javascript': 'javascript',
-      'python': 'python',
+      'javascript': 'javascript',   //4
+      'python': 'python',    //3
       'java': 'java',
-      'cpp': 'cpp',
+      'cpp': 'cpp',      //2
       'c': 'c',
       'csharp': 'csharp',
-      'go': 'go',
+      'go': 'go',     //1
       'rust': 'rust',
       'typescript': 'typescript',
       'php': 'php',
-      'ruby': 'ruby',
+      'ruby': 'ruby',     //5
       'swift': 'swift',
       'kotlin': 'kotlin'
     }

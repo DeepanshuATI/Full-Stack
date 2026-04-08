@@ -7,50 +7,45 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json'
   },
-  withCredentials: true // Important: Send cookies with requests
+  withCredentials: true 
 })
 
-// Add token to requests if available (backend uses cookies, but keep this for compatibility)
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
-// Handle response errors globally
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Auto-logout on 401 Unauthorized
     if (error.response?.status === 401) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      window.location.href = '/'
+      const currentPath = window.location.pathname
+      if (currentPath !== '/' && !currentPath.includes('/problem/')) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        window.location.href = '/'
+      }
     }
     return Promise.reject(error)
   }
 )
 
-// Auth APIs - Connected to backend
 export const authAPI = {
-  login: (credentials) => api.post('/user/login', credentials), // credentials: { identifier, password }
-  register: (userData) => api.post('/user/register', userData), // userData: { username, email, password }
+  login: (credentials) => api.post('/user/login', credentials), 
+  register: (userData) => api.post('/user/register', userData), 
   logout: () => api.post('/user/logout'),
   getProfile: () => api.get('/user/getProfile')
 }
 
-// Problem APIs - NOT YET CONNECTED (backend endpoints not mounted)
 export const problemAPI = {
-  getAll: (filters) => api.get('/problems', { params: filters }),
-  getById: (id) => api.get(`/problems/${id}`),
-  create: (problemData) => api.post('/problems', problemData),
-  update: (id, problemData) => api.put(`/problems/${id}`, problemData),
-  delete: (id) => api.delete(`/problems/${id}`)
+  getAll: (filters) => api.get('/problem', { params: filters }),
+  getById: (id) => api.get(`/problem/${id}`),
+  create: (problemData) => api.post('/problem/create', problemData),
+  update: (id, problemData) => api.put(`/problem/update/${id}`, problemData),
+  delete: (id) => api.delete(`/problem/delete/${id}`),
+  getUserProblems: () => api.get('/problem/user')
 }
 
-// Compiler API - NOT YET AVAILABLE (backend endpoint doesn't exist)
+export const submissionAPI = {
+  runCode: (problemId, data) => api.post(`/submission/run/${problemId}`, data),
+  submitCode: (problemId, data) => api.post(`/submission/submit/${problemId}`, data)
+}
+
 export const compilerAPI = {
   runCode: (data) => api.post('/compile', data)
 }
