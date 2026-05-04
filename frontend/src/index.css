@@ -45,3 +45,20 @@ code {
 .dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background: #888;
 }
+
+/* Prevent selection during panel resize */
+.resize-active {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Panel resize handle hover effect */
+.resize-handle-v:hover,
+.resize-handle-h:hover {
+  background-color: #3b82f6 !important;
+}
+
+.resize-handle-v:active,
+.resize-handle-h:active {
+  background-color: #2563eb !important;
+}

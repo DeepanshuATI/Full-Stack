@@ -29,7 +29,9 @@ export const authAPI = {
   login: (credentials) => api.post('/user/login', credentials), 
   register: (userData) => api.post('/user/register', userData), 
   logout: () => api.post('/user/logout'),
-  getProfile: () => api.get('/user/getProfile')
+  getProfile: () => api.get('/user/getProfile'),
+  getStats: () => api.get('/user/stats'),
+  getSubmissions: (params) => api.get('/user/submissions', { params })
 }
 
 export const problemAPI = {

@@ -51,7 +51,8 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
         id: backendUser?._id || Date.now(),
         username: backendUser?.firstName || formData.firstName || formData.emailId.split('@')[0],
         email: backendUser?.emailId || formData.emailId,
-        role: backendUser?.role || 'user'
+        role: backendUser?.role || 'user',
+        createdAt: backendUser?.createdAt || new Date().toISOString()
       }
 
       localStorage.setItem('user', JSON.stringify(userData))

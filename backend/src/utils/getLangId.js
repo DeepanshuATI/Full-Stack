@@ -14,17 +14,24 @@ const getLanguageById = (lang) => {
 const submitBatch = async (submissions) => {
     console.log("Submitting batch to Hosted Judge0 API...");
 
+    const encodedSubmissions = submissions.map(sub => ({
+        ...sub,
+        source_code: sub.source_code ? Buffer.from(sub.source_code).toString("base64") : sub.source_code,
+        stdin: sub.stdin ? Buffer.from(sub.stdin).toString("base64") : sub.stdin,
+        expected_output: sub.expected_output ? Buffer.from(sub.expected_output).toString("base64") : sub.expected_output
+    }));
+
     const options = {
         method: "POST",
         url: "https://ce.judge0.com/submissions/batch", // <-- hosted API
         params: {
-            base64_encoded: "false",
+            base64_encoded: "true",
         },
         headers: {
             "Content-Type": "application/json",
         },
         data: {
-            submissions
+            submissions: encodedSubmissions
         },
         httpsAgent: new (require('https').Agent)({ rejectUnauthorized: false }) // ignore SSL errors on Windows
     };

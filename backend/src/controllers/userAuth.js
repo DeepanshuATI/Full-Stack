@@ -3,6 +3,8 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 
 const User=require('../models/User');
+const Submission=require('../models/submission');
+const Problem=require('../models/problem');
 const validator=require('../utils/validator');
 const becrypt=require('bcrypt');
 const jwt=require('jsonwebtoken');
@@ -80,7 +82,8 @@ const login=async(req,res)=>{
                 firstName: user.firstName,
                 lastName: user.lastName,
                 emailId: user.emailId,
-                role: user.role
+                role: user.role,
+                createdAt: user.createdAt
             }
         });
 
@@ -108,10 +111,134 @@ const logout=async(req,res)=>{
 
 const getProfile=async(req,res)=>{
     try {
-        const user=await User.findById(req.body._id);
-        res.status(200).json({ message: "User profile fetched successfully",data:user });
+        // req.result is set by userMiddleware (the authenticated user)
+        const user = req.result;
+        if(!user){
+            return res.status(404).json({ message: "User not found" });
+        }
+        res.status(200).json({ 
+            message: "User profile fetched successfully",
+            data: {
+                _id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                emailId: user.emailId,
+                age: user.age,
+                role: user.role,
+                photo: user.photo,
+                problemSolved: user.problemSolved || [],
+                createdAt: user.createdAt
+            }
+        });
     } catch (error) {
         res.status(400).json({ message: "Error "+error });     
+    }
+}
+
+const getUserStats=async(req,res)=>{
+    try {
+        const userId = req.result._id;
+
+        // Get total submissions count
+        const totalSubmissions = await Submission.countDocuments({ userId });
+
+        // Get accepted submissions count
+        const acceptedSubmissions = await Submission.countDocuments({ userId, status: 'accepted' });
+
+        // Get unique problems solved (accepted)
+        const solvedSubmissions = await Submission.distinct('problemId', { userId, status: 'accepted' });
+        const problemsSolved = solvedSubmissions.length;
+
+        // Get difficulty breakdown by looking up the solved problems
+        let easyProblems = 0, mediumProblems = 0, hardProblems = 0;
+        if(problemsSolved > 0) {
+            const solvedProblems = await Problem.find({ _id: { $in: solvedSubmissions } }, 'difficulty');
+            solvedProblems.forEach(p => {
+                const diff = p.difficulty?.toLowerCase();
+                if(diff === 'easy') easyProblems++;
+                else if(diff === 'medium') mediumProblems++;
+                else if(diff === 'hard') hardProblems++;
+            });
+        }
+
+        // Calculate acceptance rate
+        const acceptanceRate = totalSubmissions > 0 
+            ? Math.round((acceptedSubmissions / totalSubmissions) * 1000) / 10 
+            : 0;
+
+        // Get recent submissions for activity (last 7 days)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        
+        const recentSubmissions = await Submission.aggregate([
+            { $match: { userId: userId, createdAt: { $gte: sevenDaysAgo } } },
+            { $group: { 
+                _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                count: { $sum: 1 },
+                accepted: { $sum: { $cond: [{ $eq: ["$status", "accepted"] }, 1, 0] } }
+            }},
+            { $sort: { _id: 1 } }
+        ]);
+
+        res.status(200).json({
+            message: "User stats fetched successfully",
+            data: {
+                problemsSolved,
+                easyProblems,
+                mediumProblems,
+                hardProblems,
+                totalSubmissions,
+                acceptedSubmissions,
+                acceptanceRate,
+                recentActivity: recentSubmissions
+            }
+        });
+    } catch (error) {
+        res.status(400).json({ message: "Error " + error });
+    }
+}
+
+const getUserSubmissions=async(req,res)=>{
+    try {
+        const userId = req.result._id;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+
+        const total = await Submission.countDocuments({ userId });
+
+        const submissions = await Submission.find({ userId })
+            .populate('problemId', 'title difficulty')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        const formattedSubmissions = submissions.map(s => ({
+            _id: s._id,
+            problem: s.problemId?.title || 'Unknown Problem',
+            problemId: s.problemId?._id,
+            difficulty: s.problemId?.difficulty || 'unknown',
+            status: s.status,
+            language: s.language,
+            runtime: s.runtime,
+            memory: s.memory,
+            testCasesPassed: s.testCasesPassed,
+            testCasesTotal: s.testCasesTotal,
+            createdAt: s.createdAt
+        }));
+
+        res.status(200).json({
+            message: "Submissions fetched successfully",
+            data: formattedSubmissions,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+    } catch (error) {
+        res.status(400).json({ message: "Error " + error });
     }
 }
 
@@ -151,4 +278,4 @@ const adminRegister = async (req, res) => {
     }
 }
 
-module.exports={adminRegister,register,login,logout,getProfile};
+module.exports={adminRegister,register,login,logout,getProfile,getUserStats,getUserSubmissions};

@@ -58,7 +58,7 @@ const submitCode = async (req, res) => {
       memory = Math.max(memory, Number(r.memory || 0));
     }
 
-    submission.status = passed === problem.invisibletestCases.length ? "accepted" : "failed";
+    submission.status = passed === problem.invisibletestCases.length ? "accepted" : "wrong";
     submission.testCasesPassed = passed;
     submission.errorMessage = errorMessage;
     submission.runtime = runtime;

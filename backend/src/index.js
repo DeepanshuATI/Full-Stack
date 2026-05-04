@@ -29,14 +29,20 @@ console.log("expess using port number"+process.env.PORT); // Should print 3000
 const redisClient = require('./config/redis');
 
 const IntializeConnection=async()=>{
-    try{
-        await Promise.all([db(),redisClient.connect()]);
-        console.log("Connected to MongoDB and Redis successfully");
+    try {
+        await db();
+        console.log("Database connected successfully");
+        try {
+            await redisClient.connect();
+            console.log("Connected to Redis successfully");
+        } catch (redisErr) {
+            console.log("Warning: Could not connect to Redis. Continuing without Redis. Error: " + redisErr.message);
+        }
         app.listen(process.env.PORT, () => {
             console.log("Server listening at " + process.env.PORT);
         });
-    }catch(err){
-        console.log("Error connecting to MongoDB or Redis: "+err);
+    } catch(err){
+        console.log("Error connecting to MongoDB: "+err);
     }
 }
 IntializeConnection();
